@@ -157,3 +157,4 @@ This starter is free and open source. If you need help customizing it or buildin
 
 MIT — free for personal and commercial use.
 # Beauty-Ecom
+# Beauty-Ecom
