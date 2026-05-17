@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ShoppingBag, Heart } from "lucide-react"
 import { toast } from "sonner"
 import { useCartStore } from "@/store/cart"
 import { useWishlistStore } from "@/store/wishlist"
 import { useRecentlyViewedStore } from "@/store/recently-viewed"
+import { useAuth } from "@clerk/nextjs"
 import { RecentlyViewed } from "@/components/products/recently-viewed"
 import { StarRating } from "@/components/products/star-rating"
 import { TrustSignals } from "@/components/products/trust-signals"
@@ -26,6 +27,7 @@ import { VariantSelector } from "@/components/products/variant-selector"
 import { QuantitySelector } from "@/components/products/quantity-selector"
 import { ProductGrid } from "@/components/products/product-grid"
 import { formatPrice } from "@/lib/utils"
+import { useMounted } from "@/lib/use-mounted"
 import { breadcrumbJsonLd } from "@/lib/structured-data"
 import type { Product, Brand, Category } from "@/types"
 
@@ -52,11 +54,11 @@ export function ProductDetailView({
   const wishlistItems = useWishlistStore((s) => s.items)
   const addToWishlist = useWishlistStore((s) => s.addItem)
   const removeFromWishlist = useWishlistStore((s) => s.removeItem)
+  const { isLoaded: authLoaded, isSignedIn } = useAuth()
 
   const addRecentlyViewed = useRecentlyViewedStore((s) => s.addItem)
 
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const mounted = useMounted()
   const isWishlisted = mounted && wishlistItems.some((i) => i.productId === product.id)
 
   // Track recently viewed
@@ -69,7 +71,7 @@ export function ProductDetailView({
       imageUrl: product.images[0]?.url ?? "",
       imageAlt: product.images[0]?.alt ?? product.name,
     })
-  }, [product.id])
+  }, [addRecentlyViewed, product.id, product.images, product.name, product.slug, product.variants])
 
   const selectedVariant = product.variants.find(
     (v) => v.id === selectedVariantId
@@ -98,6 +100,11 @@ export function ProductDetailView({
   }
 
   function handleToggleWishlist() {
+    if (!authLoaded || !isSignedIn) {
+      toast.error("Please log in to add products to your wishlist.")
+      return
+    }
+
     if (isWishlisted) {
       removeFromWishlist(product.id)
       toast("Removed from wishlist")

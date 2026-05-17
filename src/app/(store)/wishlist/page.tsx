@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Heart } from "lucide-react"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ProductCard } from "@/components/products/product-card"
 import { useWishlistStore } from "@/store/wishlist"
+import { useMounted } from "@/lib/use-mounted"
 import type { Product } from "@/types"
 import data from "@/data/products.json"
 
@@ -13,8 +13,7 @@ const allProducts = data.products as Product[]
 
 export default function WishlistPage() {
   const wishlistItems = useWishlistStore((s) => s.items)
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const mounted = useMounted()
 
   if (!mounted) {
     return (

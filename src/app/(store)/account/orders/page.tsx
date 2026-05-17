@@ -16,10 +16,9 @@ export default function OrdersPage() {
   if (!isLoaded) return null
 
   const email = user?.primaryEmailAddress?.emailAddress
-
-  const userOrders = email
-    ? orders.filter((o) => o.customerEmail === email)
-    : orders
+  const userOrders = user
+    ? orders.filter((o) => o.userId === user.id || (!o.userId && o.customerEmail === email))
+    : []
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">

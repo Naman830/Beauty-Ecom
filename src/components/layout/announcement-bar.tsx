@@ -1,25 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { X } from "lucide-react"
 import { siteConfig } from "@/lib/config"
+import { useMounted } from "@/lib/use-mounted"
 
 export function AnnouncementBar() {
   const [dismissed, setDismissed] = useState(false)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-    const stored = sessionStorage.getItem("announcement-dismissed")
-    if (stored === "true") setDismissed(true)
-  }, [])
+  const mounted = useMounted()
+  const storedDismissed =
+    mounted && sessionStorage.getItem("announcement-dismissed") === "true"
 
   function handleDismiss() {
     setDismissed(true)
     sessionStorage.setItem("announcement-dismissed", "true")
   }
 
-  if (!mounted || dismissed || !siteConfig.announcement) return null
+  if (!mounted || dismissed || storedDismissed || !siteConfig.announcement) return null
 
   return (
     <div className="relative bg-foreground px-4 py-2.5 text-center text-xs font-medium text-background sm:text-sm">

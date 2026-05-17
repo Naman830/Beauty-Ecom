@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,8 @@ import { Separator } from "@/components/ui/separator"
 import { CheckCircle } from "lucide-react"
 import { useOrdersStore } from "@/store/orders"
 import { formatPrice, formatDate } from "@/lib/utils"
+import { useUser } from "@clerk/nextjs"
+import { useMounted } from "@/lib/use-mounted"
 
 export default function CheckoutSuccessPage() {
   return (
@@ -22,11 +24,11 @@ function CheckoutSuccessContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get("order_id")
   const getOrderById = useOrdersStore((s) => s.getOrderById)
+  const { user, isLoaded: userLoaded } = useUser()
 
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const mounted = useMounted()
 
-  if (!mounted) {
+  if (!mounted || !userLoaded) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="text-center">
@@ -36,7 +38,14 @@ function CheckoutSuccessContent() {
     )
   }
 
-  const order = orderId ? getOrderById(orderId) : undefined
+  const foundOrder = orderId ? getOrderById(orderId) : undefined
+  const userEmail = user?.primaryEmailAddress?.emailAddress
+  const order =
+    foundOrder &&
+    user &&
+    (foundOrder.userId === user.id || (!foundOrder.userId && foundOrder.customerEmail === userEmail))
+      ? foundOrder
+      : undefined
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">

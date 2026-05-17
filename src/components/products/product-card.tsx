@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Heart } from "lucide-react"
@@ -10,6 +9,8 @@ import { formatPrice } from "@/lib/utils"
 import { PLACEHOLDER_IMAGE } from "@/lib/constants"
 import { useWishlistStore } from "@/store/wishlist"
 import { toast } from "sonner"
+import { useAuth } from "@clerk/nextjs"
+import { useMounted } from "@/lib/use-mounted"
 import type { Product } from "@/types"
 
 interface ProductCardProps {
@@ -17,6 +18,12 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const wishlistItems = useWishlistStore((s) => s.items)
+  const addItem = useWishlistStore((s) => s.addItem)
+  const removeItem = useWishlistStore((s) => s.removeItem)
+  const { isLoaded: authLoaded, isSignedIn } = useAuth()
+  const mounted = useMounted()
+
   const defaultVariant = product.variants[0]
   if (!defaultVariant) return null
 
@@ -24,18 +31,17 @@ export function ProductCard({ product }: ProductCardProps) {
   const compareAtPrice = defaultVariant.compareAtPrice
   const isOnSale = compareAtPrice && compareAtPrice > price
   const image = product.images[0]
-
-  const wishlistItems = useWishlistStore((s) => s.items)
-  const addItem = useWishlistStore((s) => s.addItem)
-  const removeItem = useWishlistStore((s) => s.removeItem)
-
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
   const isWishlisted = mounted && wishlistItems.some((i) => i.productId === product.id)
 
   function handleWishlist(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
+
+    if (!authLoaded || !isSignedIn) {
+      toast.error("Please log in to add products to your wishlist.")
+      return
+    }
+
     if (isWishlisted) {
       removeItem(product.id)
       toast("Removed from wishlist")

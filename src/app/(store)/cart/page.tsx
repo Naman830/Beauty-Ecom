@@ -9,13 +9,15 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { useCartStore } from "@/store/cart"
 import { CartItem } from "@/components/cart/cart-item"
 import { CartSummary } from "@/components/cart/cart-summary"
-import { useEffect, useState } from "react"
+import { useAuth } from "@clerk/nextjs"
+import { toast } from "sonner"
+import { useMounted } from "@/lib/use-mounted"
 
 export default function CartPage() {
   const items = useCartStore((s) => s.items)
   const getSubtotal = useCartStore((s) => s.getSubtotal)
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const { isLoaded: authLoaded, isSignedIn } = useAuth()
+  const mounted = useMounted()
 
   if (!mounted) {
     return (
@@ -42,6 +44,13 @@ export default function CartPage() {
 
   const subtotal = getSubtotal()
 
+  function handleCheckout(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (!authLoaded || isSignedIn) return
+
+    e.preventDefault()
+    toast.error("Please log in before checking out.")
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 pb-16 sm:px-6 sm:py-16 lg:px-8">
       <PageHeader title="Shopping Cart" />
@@ -55,7 +64,9 @@ export default function CartPage() {
         <CartSummary subtotal={subtotal} />
         <div className="mt-8 flex flex-col gap-3">
           <Button size="lg" asChild>
-            <Link href="/checkout">Proceed to Checkout</Link>
+            <Link href="/checkout" onClick={handleCheckout}>
+              Proceed to Checkout
+            </Link>
           </Button>
           <Button variant="outline" asChild>
             <Link href="/shop">Continue Shopping</Link>

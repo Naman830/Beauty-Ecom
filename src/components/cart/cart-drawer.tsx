@@ -10,19 +10,27 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
 import { CartItem } from "./cart-item"
-import { CartSummary } from "./cart-summary"
 import { useCartStore } from "@/store/cart"
 import { formatPrice } from "@/lib/utils"
+import { useAuth } from "@clerk/nextjs"
+import { toast } from "sonner"
 
 export function CartDrawer() {
   const items = useCartStore((s) => s.items)
   const isOpen = useCartStore((s) => s.isOpen)
   const closeCart = useCartStore((s) => s.closeCart)
   const getSubtotal = useCartStore((s) => s.getSubtotal)
+  const { isLoaded: authLoaded, isSignedIn } = useAuth()
 
   const subtotal = getSubtotal()
+
+  function handleCheckout(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (!authLoaded || isSignedIn) return
+
+    e.preventDefault()
+    toast.error("Please log in before checking out.")
+  }
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()}>
@@ -78,8 +86,16 @@ export function CartDrawer() {
                 <p className="text-xs text-muted-foreground">
                   Shipping and taxes calculated at checkout.
                 </p>
-                <Button className="w-full" size="lg" asChild onClick={closeCart}>
-                  <Link href="/checkout">Checkout</Link>
+                <Button className="w-full" size="lg" asChild>
+                  <Link
+                    href="/checkout"
+                    onClick={(e) => {
+                      handleCheckout(e)
+                      if (!e.defaultPrevented) closeCart()
+                    }}
+                  >
+                    Checkout
+                  </Link>
                 </Button>
                 <button
                   className="mb-4 w-full py-2 text-center text-sm text-muted-foreground underline hover:text-foreground sm:mb-0 sm:hidden"

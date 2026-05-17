@@ -5,6 +5,7 @@ import { getLocale, getMessages } from "next-intl/server"
 import { Toaster } from "sonner"
 import { ClerkProvider } from "@clerk/nextjs"
 import { siteConfig } from "@/lib/config"
+import { AuthStoreSync } from "@/components/auth/auth-store-sync"
 import "./globals.css"
 
 const inter = Inter({
@@ -43,6 +44,7 @@ export default async function RootLayout({
       <html lang={locale} className={`${inter.variable} h-full antialiased`}>
         <body className="min-h-full flex flex-col bg-white">
           <NextIntlClientProvider messages={messages}>
+            <AuthStoreSync />
             {children}
           </NextIntlClientProvider>
 

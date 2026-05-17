@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -14,15 +14,18 @@ import { CartSummary } from "@/components/cart/cart-summary"
 import { formatPrice } from "@/lib/utils"
 import { toast } from "sonner"
 import { siteConfig } from "@/lib/config"
+import { useUser } from "@clerk/nextjs"
+import { useMounted } from "@/lib/use-mounted"
 import type { Order } from "@/types"
 
 export default function CheckoutPage() {
   const router = useRouter()
+  const { user, isLoaded: userLoaded, isSignedIn } = useUser()
   const items = useCartStore((s) => s.items)
   const getSubtotal = useCartStore((s) => s.getSubtotal)
   const clearCart = useCartStore((s) => s.clearCart)
   const addOrder = useOrdersStore((s) => s.addOrder)
-  const [mounted, setMounted] = useState(false)
+  const mounted = useMounted()
   const [loading, setLoading] = useState(false)
 
   const [form, setForm] = useState({
@@ -37,9 +40,7 @@ export default function CheckoutPage() {
     country: "US",
   })
 
-  useEffect(() => setMounted(true), [])
-
-  if (!mounted) {
+  if (!mounted || !userLoaded) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold tracking-tight">Checkout</h1>
@@ -64,6 +65,7 @@ export default function CheckoutPage() {
   }
 
   const subtotal = getSubtotal()
+  const emailValue = form.email || user?.primaryEmailAddress?.emailAddress || ""
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
@@ -72,7 +74,15 @@ export default function CheckoutPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    if (!form.email || !form.firstName || !form.lastName || !form.line1 || !form.city || !form.state || !form.postalCode) {
+    if (!isSignedIn || !user) {
+      toast.error("Please log in before checking out.")
+      router.push("/auth/login")
+      return
+    }
+
+    const customerEmail = user.primaryEmailAddress?.emailAddress ?? form.email
+
+    if (!customerEmail || !form.firstName || !form.lastName || !form.line1 || !form.city || !form.state || !form.postalCode) {
       toast.error("Please fill in all required fields")
       return
     }
@@ -88,6 +98,7 @@ export default function CheckoutPage() {
     const order: Order = {
       id: orderId,
       orderNumber: orderId,
+      userId: user.id,
       items: items.map((item) => ({
         id: item.id,
         productId: item.productId,
@@ -120,7 +131,7 @@ export default function CheckoutPage() {
         country: form.country,
         isDefault: true,
       },
-      customerEmail: form.email,
+      customerEmail,
       customerName: `${form.firstName} ${form.lastName}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -151,7 +162,7 @@ export default function CheckoutPage() {
                   id="email"
                   name="email"
                   type="email"
-                  value={form.email}
+                  value={emailValue}
                   onChange={handleChange}
                   placeholder="you@example.com"
                   required

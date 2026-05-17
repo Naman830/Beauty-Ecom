@@ -12,6 +12,9 @@ import { useEffect, useState, useSyncExternalStore } from "react"
 import type { Category } from "@/types"
 import { useCartStore } from "@/store/cart"
 import { useAddressStore } from "@/store/addresses"
+import { useOrdersStore } from "@/store/orders"
+import { useWishlistStore } from "@/store/wishlist"
+import { toast } from "sonner"
 import {
   UserButton,
   useAuth,
@@ -31,7 +34,10 @@ export function Header({ categories = [] }: HeaderProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const openCart = useCartStore((s) => s.openCart)
   const getItemCount = useCartStore((s) => s.getItemCount)
+  const clearCart = useCartStore((s) => s.clearCart)
   const clearAddresses = useAddressStore((s) => s.clearAddresses)
+  const clearOrders = useOrdersStore((s) => s.clearOrders)
+  const clearWishlist = useWishlistStore((s) => s.clearAll)
   const { isLoaded: authLoaded, isSignedIn } = useAuth()
   const { signOut } = useClerk()
 
@@ -45,8 +51,10 @@ export function Header({ categories = [] }: HeaderProps) {
   useEffect(() => {
     if (authLoaded && !isSignedIn) {
       clearAddresses()
+      clearOrders()
+      clearWishlist()
     }
-  }, [authLoaded, clearAddresses, isSignedIn])
+  }, [authLoaded, clearAddresses, clearOrders, clearWishlist, isSignedIn])
 
   // Cmd+K / Ctrl+K to open search
   useEffect(() => {
@@ -63,7 +71,17 @@ export function Header({ categories = [] }: HeaderProps) {
   // Clears local store data on sign out
   async function handleSignOut() {
     clearAddresses()
+    clearOrders()
+    clearWishlist()
+    clearCart()
     await signOut({ redirectUrl: "/" })
+  }
+
+  function handleProtectedNav(e: React.MouseEvent, label: string) {
+    if (!authLoaded || isSignedIn) return
+
+    e.preventDefault()
+    toast.error(`Please log in to access ${label}.`)
   }
 
   return (
@@ -113,7 +131,13 @@ export function Header({ categories = [] }: HeaderProps) {
                               <Link
                                 href={item.href}
                                 className="flex-1 py-2.5 text-sm font-medium text-foreground transition-colors hover:text-foreground/70"
-                                onClick={() => setMobileMenuOpen(false)}
+                                onClick={(e) => {
+                                  if (item.href.startsWith("/account") || item.href === "/wishlist") {
+                                    handleProtectedNav(e, item.name.toLowerCase())
+                                    if (e.defaultPrevented) return
+                                  }
+                                  setMobileMenuOpen(false)
+                                }}
                               >
                                 {item.name}
                               </Link>
@@ -207,6 +231,7 @@ export function Header({ categories = [] }: HeaderProps) {
               href="/wishlist"
               className="hidden h-10 w-10 items-center justify-center rounded-md hover:bg-accent lg:inline-flex"
               aria-label={t("wishlist")}
+              onClick={(e) => handleProtectedNav(e, "wishlist")}
             >
               <Heart className="h-5 w-5" />
             </Link>

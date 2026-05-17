@@ -10,6 +10,7 @@ interface OrdersState {
   getOrderById: (id: string) => Order | undefined
   getOrdersByEmail: (email: string) => Order[]
   updateOrderStatus: (id: string, status: Order["status"]) => void
+  clearOrders: () => void
 }
 
 export const useOrdersStore = create<OrdersState>()(
@@ -35,6 +36,8 @@ export const useOrdersStore = create<OrdersState>()(
           ),
         }))
       },
+
+      clearOrders: () => set({ orders: [] }),
     }),
     { name: "orders-storage" }
   )

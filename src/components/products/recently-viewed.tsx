@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRecentlyViewedStore } from "@/store/recently-viewed"
 import { PLACEHOLDER_IMAGE } from "@/lib/constants"
 import { formatPrice } from "@/lib/utils"
+import { useMounted } from "@/lib/use-mounted"
 
 interface RecentlyViewedProps {
   excludeProductId?: string
@@ -13,8 +13,7 @@ interface RecentlyViewedProps {
 
 export function RecentlyViewed({ excludeProductId }: RecentlyViewedProps) {
   const getItems = useRecentlyViewedStore((s) => s.getItems)
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const mounted = useMounted()
 
   if (!mounted) return null
 
