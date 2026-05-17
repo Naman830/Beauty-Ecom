@@ -1,15 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { Search, ShoppingBag, User, Menu, Heart, LogOut, ChevronDown } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Search, ShoppingBag, Menu, Heart, ChevronDown } from "lucide-react"
 import { SearchModal } from "@/components/search/search-modal"
 import { cn } from "@/lib/utils"
 import { shopLinks, mobileMenuSections } from "@/lib/navigation"
@@ -18,8 +11,7 @@ import { useTranslations } from "next-intl"
 import { useState, useEffect, useCallback } from "react"
 import type { Category } from "@/types"
 import { useCartStore } from "@/store/cart"
-import { useAuthStore } from "@/store/auth"
-import { useRouter } from "next/navigation"
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs"
 
 interface HeaderProps {
   /** All categories (top-level + subcategories) from the repository layer */
@@ -35,10 +27,6 @@ export function Header({ categories = [] }: HeaderProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const openCart = useCartStore((s) => s.openCart)
   const getItemCount = useCartStore((s) => s.getItemCount)
-  const user = useAuthStore((s) => s.user)
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const logout = useAuthStore((s) => s.logout)
-  const router = useRouter()
 
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
@@ -178,47 +166,30 @@ export function Header({ categories = [] }: HeaderProps) {
           </Link>
 
           {/* User menu — desktop only */}
-          {mounted && isAuthenticated ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="hidden h-10 w-10 items-center justify-center rounded-md hover:bg-accent lg:inline-flex"
-                aria-label={t("accountMenu")}
-              >
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-xs font-medium text-background">
-                  {user?.firstName?.[0] ?? "U"}
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <div className="px-2 py-1.5">
-                  <p className="text-sm font-medium">{user?.firstName} {user?.lastName}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/account")}>
-                  {tCommon("signIn")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push("/account/orders")}>
-                  {tCommon("orders")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push("/account/settings")}>
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => { logout(); router.push("/") }}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {tCommon("signOut")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Link
-              href="/auth/login"
-              className="hidden h-10 w-10 items-center justify-center rounded-md hover:bg-accent lg:inline-flex"
-              aria-label={tCommon("signIn")}
-            >
-              <User className="h-5 w-5" />
-            </Link>
-          )}
+         {/* Clerk Auth */}
+<div className="hidden lg:flex items-center">
+  <SignedOut>
+    <SignInButton mode="redirect">
+      <button
+        className="inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-medium hover:bg-accent"
+        aria-label={tCommon("signIn")}
+      >
+        Login
+      </button>
+    </SignInButton>
+  </SignedOut>
+
+  <SignedIn>
+    <UserButton
+      afterSignOutUrl="/"
+      appearance={{
+        elements: {
+          avatarBox: "h-9 w-9",
+        },
+      }}
+    />
+  </SignedIn>
+</div>
 
           {/* Cart */}
           <button
