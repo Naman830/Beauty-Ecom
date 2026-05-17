@@ -5,10 +5,10 @@
 
 export const siteConfig = {
   // Branding
-  name: "Next.js Ecommerce Starter",
-  tagline: "A free, open-source Next.js ecommerce template.",
+  name: "Taruvar",
+  tagline: "Rituals Are Never Rushed",
   description:
-    "A free, production-ready Next.js ecommerce starter template built with Tailwind CSS and shadcn/ui. Responsive, accessible, SEO optimized, and ready to connect to any checkout system. Built by Epic Design Labs.",
+    "Experience Taruvar — Discover luxury Ayurvedic skincare with exclusive new user gifts and free samples. Shop Forest Essentials online for premium, natural beauty with exciting free gifts. Certified Toxin Free.",
 
   // Announcement bar (set to "" to hide)
   announcement: "Free shipping on all orders over $75 — Shop now!",
