@@ -12,7 +12,7 @@ Built by [Epic Design Labs](https://epicdesignlabs.com)
 - **Shopping Cart** — Slide-out drawer, quantity controls, persisted to localStorage
 - **Wishlist** — Save products with heart icons, persisted to localStorage
 - **Checkout** — Full checkout flow with shipping form and order creation
-- **Authentication** — Login, register, forgot password with demo accounts
+- **Authentication** — Clerk-powered sign in, registration, password reset, and profile security
 - **Account** — Order history, saved addresses, profile settings
 - **Brands** — Brand pages with product filtering
 - **Subcategories** — Nested categories with accordion mobile menu
@@ -31,7 +31,7 @@ Built by [Epic Design Labs](https://epicdesignlabs.com)
 - **Next.js 16** (App Router, React Server Components)
 - **TypeScript**
 - **Tailwind CSS v4** + **shadcn/ui**
-- **Zustand** (cart, wishlist, auth, orders — persisted to localStorage)
+- **Zustand** (cart, wishlist, addresses, orders — persisted to localStorage)
 - **Zod** (form validation)
 - **next-intl** (internationalization)
 - **Sonner** (toast notifications)
@@ -49,12 +49,18 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Demo Accounts
+Create a `.env` file with Clerk credentials before running auth-protected pages:
 
-| Email | Password | Role |
-|-------|----------|------|
-| `admin@example.com` | `password123` | Admin |
-| `demo@example.com` | `password123` | Customer |
+```bash
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxx
+CLERK_SECRET_KEY=sk_test_xxxx
+```
+
+To grant admin access, set the Clerk user's public metadata to:
+
+```json
+{ "role": "admin" }
+```
 
 ## Project Structure
 
@@ -67,7 +73,7 @@ src/
       cart/           # Shopping cart
       checkout/       # Checkout + success
       account/         # Dashboard, orders, addresses, settings
-      auth/            # Login, register, forgot password
+      auth/            # Clerk login and registration
       brands/          # All brands page
     (admin)/admin/    # Admin dashboard
   components/
@@ -76,7 +82,6 @@ src/
     products/         # ProductCard, Grid, Gallery, StarRating, etc.
     cart/             # CartDrawer, CartItem, CartSummary
     search/           # SearchModal
-    auth/             # AuthCardLayout
   data/
     products.json     # Product, category, brand data
   lib/
@@ -87,10 +92,9 @@ src/
     validators/       # Zod schemas
     analytics.ts      # Event tracking placeholder
     structured-data.ts # JSON-LD helpers
-  store/              # Zustand stores (cart, wishlist, auth, orders)
+  store/              # Zustand stores (cart, wishlist, addresses, orders)
   types/              # TypeScript types + interfaces
   i18n/               # next-intl config
-  hooks/              # Custom hooks (useAuthGuard)
 messages/
   en.json             # English translations (200+ keys)
   es.json             # Spanish translations

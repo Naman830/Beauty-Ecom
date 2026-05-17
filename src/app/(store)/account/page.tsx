@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,12 +37,6 @@ const accountLinks = [
 ];
 
 export default async function AccountPage() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/auth/login");
-  }
-
   const user = await currentUser();
 
   return (

@@ -9,21 +9,22 @@ import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
 import { MapPin, Plus, Trash2 } from "lucide-react"
-import { useAuthGuard } from "@/hooks/use-auth-guard"
-import { useAuthStore } from "@/store/auth"
+import { useUser } from "@clerk/nextjs"
+import { useAddressStore } from "@/store/addresses"
 import { toast } from "sonner"
 
 export default function AddressesPage() {
-  const { user, isReady } = useAuthGuard()
-  const addAddress = useAuthStore((s) => s.addAddress)
-  const removeAddress = useAuthStore((s) => s.removeAddress)
+  const { isLoaded } = useUser()
+  const addresses = useAddressStore((s) => s.addresses)
+  const addAddress = useAddressStore((s) => s.addAddress)
+  const removeAddress = useAddressStore((s) => s.removeAddress)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({
     firstName: "", lastName: "", line1: "", line2: "",
     city: "", state: "", postalCode: "", country: "US",
   })
 
-  if (!isReady) return null
+  if (!isLoaded) return null
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
@@ -41,14 +42,12 @@ export default function AddressesPage() {
       state: form.state,
       postalCode: form.postalCode,
       country: form.country,
-      isDefault: (user?.addresses.length ?? 0) === 0,
+      isDefault: addresses.length === 0,
     })
     toast.success("Address added")
     setShowForm(false)
     setForm({ firstName: "", lastName: "", line1: "", line2: "", city: "", state: "", postalCode: "", country: "US" })
   }
-
-  const addresses = user?.addresses ?? []
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">

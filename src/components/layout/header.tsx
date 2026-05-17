@@ -2,19 +2,23 @@
 
 import Link from "next/link"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Search, ShoppingBag, Menu, Heart, ChevronDown } from "lucide-react"
+import { Search, ShoppingBag, Menu, Heart, ChevronDown, LogIn } from "lucide-react"
 import { SearchModal } from "@/components/search/search-modal"
 import { cn } from "@/lib/utils"
 import { shopLinks, mobileMenuSections } from "@/lib/navigation"
 import { siteConfig } from "@/lib/config"
 import { useTranslations } from "next-intl"
-import { useState, useEffect, useCallback } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import type { Category } from "@/types"
 import { useCartStore } from "@/store/cart"
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs"
+import { useAddressStore } from "@/store/addresses"
+import {
+  UserButton,
+  useAuth,
+  useClerk,
+} from "@clerk/nextjs"
 
 interface HeaderProps {
-  /** All categories (top-level + subcategories) from the repository layer */
   categories?: Category[]
 }
 
@@ -27,10 +31,22 @@ export function Header({ categories = [] }: HeaderProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const openCart = useCartStore((s) => s.openCart)
   const getItemCount = useCartStore((s) => s.getItemCount)
+  const clearAddresses = useAddressStore((s) => s.clearAddresses)
+  const { isLoaded: authLoaded, isSignedIn } = useAuth()
+  const { signOut } = useClerk()
 
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const mounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false
+  )
   const itemCount = mounted ? getItemCount() : 0
+
+  useEffect(() => {
+    if (authLoaded && !isSignedIn) {
+      clearAddresses()
+    }
+  }, [authLoaded, clearAddresses, isSignedIn])
 
   // Cmd+K / Ctrl+K to open search
   useEffect(() => {
@@ -44,174 +60,197 @@ export function Header({ categories = [] }: HeaderProps) {
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [])
 
+  // Clears local store data on sign out
+  async function handleSignOut() {
+    clearAddresses()
+    await signOut({ redirectUrl: "/" })
+  }
+
   return (
     <>
-    <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Mobile menu */}
-        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetTrigger
-            className="inline-flex items-center justify-center rounded-md p-2 text-foreground/60 hover:bg-accent hover:text-foreground lg:hidden"
-            aria-label={t("openMenu")}
-            aria-expanded={mobileMenuOpen}
-          >
-            <Menu className="h-5 w-5" />
-          </SheetTrigger>
-          <SheetContent side="left" className="!w-full !gap-0 sm:!w-80" showCloseButton={false}>
-            <div className="shrink-0 px-6 pt-5 pb-2">
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                &larr; {tCommon("close")}
-              </button>
-            </div>
+      <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-8">
 
-            <nav className="flex flex-1 flex-col overflow-y-auto px-6 pb-8">
-              {mobileMenuSections.map((section, sectionIdx) => (
-                <div key={section.label}>
-                  {sectionIdx > 0 && <div className="my-4 border-t" />}
-                  <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    {section.label}
-                  </p>
-                  <div className="ml-3">
-                  {section.items.map((item) => {
-                    const slug = item.href.replace("/", "")
-                    const parentCat = allCategories.find((c) => c.slug === slug)
-                    const subcats = parentCat
-                      ? allCategories.filter((c) => c.parentId === parentCat.id)
-                      : []
-                    const hasSubcats = subcats.length > 0
-                    const isExpanded = expandedCategory === item.name
+          {/* Mobile menu */}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger
+              className="inline-flex items-center justify-center rounded-md p-2 text-foreground/60 hover:bg-accent hover:text-foreground lg:hidden"
+              aria-label={t("openMenu")}
+              aria-expanded={mobileMenuOpen}
+            >
+              <Menu className="h-5 w-5" />
+            </SheetTrigger>
+            <SheetContent side="left" className="!w-full !gap-0 sm:!w-80" showCloseButton={false}>
+              <div className="shrink-0 px-6 pt-5 pb-2">
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  &larr; {tCommon("close")}
+                </button>
+              </div>
 
-                    return (
-                      <div key={item.name}>
-                        <div className="flex items-center">
-                          <Link
-                            href={item.href}
-                            className="flex-1 py-2.5 text-sm font-medium text-foreground transition-colors hover:text-foreground/70"
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            {item.name}
-                          </Link>
-                          {hasSubcats && (
-                            <button
-                              onClick={() => setExpandedCategory(isExpanded ? null : item.name)}
-                              className="p-2 text-muted-foreground hover:text-foreground"
-                              aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.name}`}
-                              aria-expanded={isExpanded}
-                            >
-                              <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
-                            </button>
-                          )}
-                        </div>
-                        {hasSubcats && isExpanded && (
-                          <div className="mb-2 ml-4 flex flex-col border-l pl-4">
-                            {subcats.map((sub) => (
+              <nav className="flex flex-1 flex-col overflow-y-auto px-6 pb-8">
+                {mobileMenuSections.map((section, sectionIdx) => (
+                  <div key={section.label}>
+                    {sectionIdx > 0 && <div className="my-4 border-t" />}
+                    <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      {section.label}
+                    </p>
+                    <div className="ml-3">
+                      {section.items.map((item) => {
+                        const slug = item.href.replace("/", "")
+                        const parentCat = allCategories.find((c) => c.slug === slug)
+                        const subcats = parentCat
+                          ? allCategories.filter((c) => c.parentId === parentCat.id)
+                          : []
+                        const hasSubcats = subcats.length > 0
+                        const isExpanded = expandedCategory === item.name
+
+                        return (
+                          <div key={item.name}>
+                            <div className="flex items-center">
                               <Link
-                                key={sub.id}
-                                href={`/${sub.slug}`}
-                                className="py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                                href={item.href}
+                                className="flex-1 py-2.5 text-sm font-medium text-foreground transition-colors hover:text-foreground/70"
                                 onClick={() => setMobileMenuOpen(false)}
                               >
-                                {sub.name}
+                                {item.name}
                               </Link>
-                            ))}
+                              {hasSubcats && (
+                                <button
+                                  onClick={() => setExpandedCategory(isExpanded ? null : item.name)}
+                                  className="p-2 text-muted-foreground hover:text-foreground"
+                                  aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.name}`}
+                                  aria-expanded={isExpanded}
+                                >
+                                  <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
+                                </button>
+                              )}
+                            </div>
+                            {hasSubcats && isExpanded && (
+                              <div className="mb-2 ml-4 flex flex-col border-l pl-4">
+                                {subcats.map((sub) => (
+                                  <Link
+                                    key={sub.id}
+                                    href={`/${sub.slug}`}
+                                    className="py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                  >
+                                    {sub.name}
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )
-                  })}
+                        )
+                      })}
+                    </div>
                   </div>
+                ))}
+
+                {/* Mobile auth section */}
+                <div className="my-4 border-t" />
+                <div className="mt-4">
+                  {authLoaded && !isSignedIn && (
+                    <Link
+                      href="/auth/login"
+                      className="flex w-full items-center gap-2 py-2.5 text-sm font-medium text-foreground hover:text-foreground/70"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                        <LogIn className="h-4 w-4" />
+                        Login / Register
+                    </Link>
+                  )}
+                  {authLoaded && isSignedIn && (
+                    <button
+                      onClick={handleSignOut}
+                      className="flex w-full items-center gap-2 py-2.5 text-sm font-medium text-foreground hover:text-foreground/70"
+                    >
+                      Sign Out
+                    </button>
+                  )}
                 </div>
-              ))}
-            </nav>
-          </SheetContent>
-        </Sheet>
+              </nav>
+            </SheetContent>
+          </Sheet>
 
-        {/* Logo */}
-        <Link href="/" className="text-xl font-semibold tracking-tight">
-          {siteConfig.name}
-        </Link>
-
-        {/* Desktop nav */}
-        <nav className="hidden lg:flex lg:gap-6">
-          {shopLinks.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="text-sm font-medium text-foreground transition-colors hover:text-foreground/70"
-            >
-              {item.name}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Actions */}
-        <div className="flex items-center">
-          <button
-            onClick={() => setSearchOpen(true)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md hover:bg-accent"
-            aria-label={t("searchProducts")}
-          >
-            <Search className="h-5 w-5" />
-          </button>
-
-          <Link
-            href="/wishlist"
-            className="hidden h-10 w-10 items-center justify-center rounded-md hover:bg-accent lg:inline-flex"
-            aria-label={t("wishlist")}
-          >
-            <Heart className="h-5 w-5" />
+          {/* Logo */}
+          <Link href="/" className="text-xl font-semibold tracking-tight">
+            {siteConfig.name}
           </Link>
 
-          {/* User menu — desktop only */}
-         {/* Clerk Auth */}
-<div className="hidden lg:flex items-center">
-  <SignedOut>
-    <SignInButton mode="redirect">
-      <button
-        className="inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-medium hover:bg-accent"
-        aria-label={tCommon("signIn")}
-      >
-        Login
-      </button>
-    </SignInButton>
-  </SignedOut>
-
-  <SignedIn>
-    <UserButton
-      afterSignOutUrl="/"
-      appearance={{
-        elements: {
-          avatarBox: "h-9 w-9",
-        },
-      }}
-    />
-  </SignedIn>
-</div>
-
-          {/* Cart */}
-          <button
-            onClick={openCart}
-            className="relative inline-flex h-10 w-10 items-center justify-center rounded-md hover:bg-accent"
-            aria-label={t("openCart")}
-          >
-            <ShoppingBag className="h-5 w-5" />
-            {itemCount > 0 && (
-              <span
-                className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-[10px] font-medium text-background"
-                aria-live="polite"
-                aria-atomic="true"
-                aria-label={`${itemCount} ${itemCount === 1 ? "item" : "items"} in cart`}
+          {/* Desktop nav */}
+          <nav className="hidden lg:flex lg:gap-6">
+            {shopLinks.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className="text-sm font-medium text-foreground transition-colors hover:text-foreground/70"
               >
-                {itemCount > 9 ? "9+" : itemCount}
-              </span>
-            )}
-          </button>
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Actions */}
+          <div className="flex items-center">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-md hover:bg-accent"
+              aria-label={t("searchProducts")}
+            >
+              <Search className="h-5 w-5" />
+            </button>
+
+            <Link
+              href="/wishlist"
+              className="hidden h-10 w-10 items-center justify-center rounded-md hover:bg-accent lg:inline-flex"
+              aria-label={t("wishlist")}
+            >
+              <Heart className="h-5 w-5" />
+            </Link>
+
+            {/* Desktop auth */}
+            <div className="hidden lg:flex items-center">
+              {authLoaded && !isSignedIn && (
+                <Link
+                  href="/auth/login"
+                  className="inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-medium hover:bg-accent"
+                  aria-label={tCommon("signIn")}
+                >
+                  Login
+                </Link>
+              )}
+              {authLoaded && isSignedIn && (
+                <UserButton
+                  appearance={{ elements: { avatarBox: "h-9 w-9" } }}
+                  userProfileUrl="/account/settings"
+                />
+              )}
+            </div>
+
+            {/* Cart */}
+            <button
+              onClick={openCart}
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-md hover:bg-accent"
+              aria-label={t("openCart")}
+            >
+              <ShoppingBag className="h-5 w-5" />
+              {itemCount > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-foreground text-[10px] font-medium text-background"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  aria-label={`${itemCount} ${itemCount === 1 ? "item" : "items"} in cart`}
+                >
+                  {itemCount > 9 ? "9+" : itemCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
 
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </>

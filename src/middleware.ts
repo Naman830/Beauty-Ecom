@@ -3,12 +3,12 @@ import { NextResponse } from "next/server"
 
 const isProtectedRoute = createRouteMatcher([
   "/account(.*)",
+  "/admin(.*)",
   "/checkout(.*)",
   "/wishlist",
 ])
 
 export default clerkMiddleware(async (auth, req) => {
-  // Protect routes
   if (isProtectedRoute(req)) {
     await auth.protect()
   }
@@ -38,11 +38,12 @@ export default clerkMiddleware(async (auth, req) => {
   // CSP
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.dev https://*.clerk.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self' https:",
+    "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.dev https://*.clerk.com https:",
+    "frame-src https://*.clerk.accounts.dev https://*.clerk.dev https://*.clerk.com",
     "frame-ancestors 'none'",
   ].join("; ")
 

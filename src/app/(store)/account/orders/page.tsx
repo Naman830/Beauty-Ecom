@@ -1,23 +1,24 @@
 "use client"
 
-import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Package } from "lucide-react"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
 import { OrderStatusBadge } from "@/components/ui/order-status-badge"
-import { useAuthGuard } from "@/hooks/use-auth-guard"
+import { useUser } from "@clerk/nextjs"
 import { useOrdersStore } from "@/store/orders"
 import { formatPrice, formatDate } from "@/lib/utils"
 
 export default function OrdersPage() {
-  const { user, isReady } = useAuthGuard()
+  const { user, isLoaded } = useUser()
   const orders = useOrdersStore((s) => s.orders)
 
-  if (!isReady) return null
+  if (!isLoaded) return null
 
-  const userOrders = user
-    ? orders.filter((o) => o.customerEmail === user.email)
+  const email = user?.primaryEmailAddress?.emailAddress
+
+  const userOrders = email
+    ? orders.filter((o) => o.customerEmail === email)
     : orders
 
   return (

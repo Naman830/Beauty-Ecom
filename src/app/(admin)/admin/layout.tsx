@@ -1,8 +1,7 @@
-"use client"
-
 import Link from "next/link"
+import { notFound } from "next/navigation"
+import { auth, currentUser } from "@clerk/nextjs/server"
 import { LayoutDashboard, Package, Users } from "lucide-react"
-import { useAuthGuard } from "@/hooks/use-auth-guard"
 
 const adminNav = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -10,29 +9,18 @@ const adminNav = [
   { name: "Customers", href: "/admin/customers", icon: Users },
 ]
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { user, isReady } = useAuthGuard()
+  await auth.protect()
 
-  if (!isReady) return null
+  const user = await currentUser()
+  const role = user?.publicMetadata?.role
 
-  if (user?.role !== "admin") {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Access Denied</h1>
-          <p className="mt-2 text-muted-foreground">
-            You need admin privileges to access this page.
-          </p>
-          <Link href="/" className="mt-4 inline-block text-sm underline">
-            Go Home
-          </Link>
-        </div>
-      </div>
-    )
+  if (role !== "admin") {
+    notFound()
   }
 
   return (
